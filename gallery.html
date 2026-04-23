@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gallery — Jonathan Pamment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --text-primary: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --text-tertiary: #aeaeb2;
+      --accent: #0071e3;
+      --radius: 14px;
+    }
+
+    html { -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* ── Nav bar ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(245,245,247,0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 24px;
+      height: 52px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .back-btn:hover { opacity: 0.75; }
+
+    .nav-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    /* ── Page ── */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 100px;
+    }
+
+    /* ── Upload strip ── */
+    .upload-strip {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 980px;
+      padding: 12px 28px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+      user-select: none;
+    }
+
+    .upload-btn:hover  { opacity: 0.85; }
+    .upload-btn:active { transform: scale(0.97); }
+    .upload-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Image wall ── */
+    .image-wall {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+
+    .wall-item {
+      aspect-ratio: 1;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+      background: var(--surface);
+    }
+
+    .wall-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.35s ease;
+    }
+
+    .wall-item:hover img { transform: scale(1.04); }
+
+    /* ── Placeholder ── */
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      border: 1.5px dashed var(--text-tertiary);
+      background: transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .placeholder:hover {
+      border-color: var(--accent);
+      background: rgba(0,113,227,0.04);
+    }
+
+    .placeholder .ph-icon { color: var(--text-tertiary); transition: color 0.15s; }
+    .placeholder:hover .ph-icon { color: var(--accent); }
+
+    .placeholder .ph-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      transition: color 0.15s;
+    }
+
+    .placeholder:hover .ph-label { color: var(--accent); }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      object-fit: contain;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+
+    @media (max-width: 600px) {
+      .image-wall { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="back-btn">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 1L1 6.5 7 12"/>
+      </svg>
+      Back
+    </a>
+    <span class="nav-title" id="pageTitle"></span>
+    <span></span>
+  </nav>
+
+  <main class="page">
+    <div class="upload-strip">
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <button class="upload-btn" id="uploadBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Add Photos
+      </button>
+    </div>
+
+    <div class="image-wall" id="imageWall"></div>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
+  <script>
+    const PLACEHOLDER_COUNT = 9;
+
+    const configs = {
+      motorcycling: { title: 'Adventure Motorcycling', key: 'jp_gallery_motorcycling' },
+      paragliding:  { title: 'Paragliding',            key: 'jp_gallery_paragliding'  }
+    };
+
+    const type   = new URLSearchParams(window.location.search).get('type') || 'motorcycling';
+    const cfg    = configs[type] || configs.motorcycling;
+
+    document.title = cfg.title + ' — Jonathan Pamment';
+    document.getElementById('pageTitle').textContent = cfg.title;
+
+    /* ── Storage ── */
+    function loadImages() {
+      try { return JSON.parse(localStorage.getItem(cfg.key) || '[]'); }
+      catch { return []; }
+    }
+
+    function saveImages(images) {
+      try {
+        localStorage.setItem(cfg.key, JSON.stringify(images));
+      } catch {
+        alert('Storage is full — you may need to remove some photos to add more.');
+      }
+    }
+
+    /* ── Compress before storing ── */
+    function compress(file) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1400;
+            const ratio  = Math.min(MAX / img.width, MAX / img.height, 1);
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /* ── Lightbox ── */
+    const lightbox     = document.getElementById('lightbox');
+    const lightboxImg  = document.getElementById('lightboxImg');
+    const lightboxClose = document.getElementById('lightboxClose');
+
+    function openLightbox(src) {
+      lightboxImg.src = src;
+      lightbox.classList.add('open');
+    }
+
+    lightboxClose.addEventListener('click', () => lightbox.classList.remove('open'));
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
+
+    /* ── Render ── */
+    function renderWall() {
+      const images = loadImages();
+      const wall   = document.getElementById('imageWall');
+      wall.innerHTML = '';
+
+      images.forEach(src => {
+        const item = document.createElement('div');
+        item.className = 'wall-item';
+        const img = document.createElement('img');
+        img.src = src;
+        img.loading = 'lazy';
+        img.alt = '';
+        item.appendChild(img);
+        item.addEventListener('click', () => openLightbox(src));
+        wall.appendChild(item);
+      });
+
+      const remaining = Math.max(0, PLACEHOLDER_COUNT - images.length);
+      for (let i = 0; i < remaining; i++) {
+        const item = document.createElement('div');
+        item.className = 'wall-item placeholder';
+        item.innerHTML = `
+          <svg class="ph-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span class="ph-label">Add a photo</span>`;
+        item.addEventListener('click', () => document.getElementById('fileInput').click());
+        wall.appendChild(item);
+      }
+    }
+
+    /* ── Upload ── */
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async e => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Adding…';
+
+      const images = loadImages();
+      for (const file of files) {
+        images.push(await compress(file));
+      }
+      saveImages(images);
+      renderWall();
+
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Add Photos`;
+      e.target.value = '';
+    });
+
+    renderWall();
+  </script>
+</body>
+</html>
