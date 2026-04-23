@@ -108,6 +108,34 @@
 
     .wall-item:hover img { transform: scale(1.04); }
 
+    /* ── Video wall item ── */
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.18);
+      transition: background 0.2s;
+    }
+
+    .wall-item.is-video:hover .play-overlay { background: rgba(0,0,0,0.35); }
+    .wall-item.is-video:hover img { transform: scale(1.04); }
+
+    .play-btn-icon {
+      width: 54px;
+      height: 54px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+
+    .wall-item.is-video:hover .play-btn-icon { transform: scale(1.1); }
+
     /* ── Lightbox ── */
     .lightbox {
       display: none;
@@ -127,6 +155,14 @@
       border-radius: 12px;
       object-fit: contain;
       box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+
+    .lightbox video {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      display: none;
     }
 
     .lightbox-close {
@@ -208,18 +244,21 @@
     <button class="lightbox-close" id="lightboxClose">✕</button>
     <button class="lightbox-prev" id="lightboxPrev">&#8249;</button>
     <img id="lightboxImg" src="" alt="">
+    <video id="lightboxVideo" controls playsinline preload="none"></video>
     <button class="lightbox-next" id="lightboxNext">&#8250;</button>
   </div>
 
   <script>
+    // Items can be plain strings (images) or objects:
+    // { type: 'video', thumb: 'images/thumb.jpg', src: 'images/clip.mov' }
     const configs = {
       motorcycling: {
         title: 'Adventure Motorcycling',
-        images: []
+        items: []
       },
       paragliding: {
         title: 'Paragliding',
-        images: [
+        items: [
           'images/Corryong1.jpg',
           'images/Corryong2.JPG',
           'images/Corryong3.jpg',
@@ -228,7 +267,8 @@
           'images/Rainbow3.JPG',
           'images/Rainbow4.jpg',
           'images/Rainbow5.jpg',
-          'images/Rainbow6.jpg'
+          'images/Rainbow6.jpg',
+          { type: 'video', thumb: 'images/IMG_4409.png', src: 'images/IMG_4409.MOV' }
         ]
       }
     };
@@ -239,37 +279,59 @@
     document.title = cfg.title + ' — Jonathan Pamment';
     document.getElementById('pageTitle').textContent = cfg.title;
 
+    const isVideo = item => typeof item === 'object' && item.type === 'video';
+
     /* ── Lightbox ── */
     const lightbox      = document.getElementById('lightbox');
     const lightboxImg   = document.getElementById('lightboxImg');
+    const lightboxVideo = document.getElementById('lightboxVideo');
     const lightboxClose = document.getElementById('lightboxClose');
     const lightboxPrev  = document.getElementById('lightboxPrev');
     const lightboxNext  = document.getElementById('lightboxNext');
     let currentIndex    = 0;
 
-    function openLightbox(index) {
+    function stopVideo() {
+      lightboxVideo.pause();
+      lightboxVideo.removeAttribute('src');
+      lightboxVideo.load();
+    }
+
+    function showItem(index) {
+      stopVideo();
       currentIndex = index;
-      lightboxImg.src = cfg.images[currentIndex];
+      const item = cfg.items[currentIndex];
+      if (isVideo(item)) {
+        lightboxImg.style.display = 'none';
+        lightboxVideo.style.display = 'block';
+        lightboxVideo.src = item.src;
+        lightboxVideo.play().catch(() => {});
+      } else {
+        lightboxVideo.style.display = 'none';
+        lightboxImg.style.display = 'block';
+        lightboxImg.src = item;
+      }
+    }
+
+    function openLightbox(index) {
+      showItem(index);
       lightbox.classList.add('open');
     }
 
-    function showPrev() {
-      currentIndex = (currentIndex - 1 + cfg.images.length) % cfg.images.length;
-      lightboxImg.src = cfg.images[currentIndex];
+    function closeLightbox() {
+      stopVideo();
+      lightbox.classList.remove('open');
     }
 
-    function showNext() {
-      currentIndex = (currentIndex + 1) % cfg.images.length;
-      lightboxImg.src = cfg.images[currentIndex];
-    }
+    function showPrev() { showItem((currentIndex - 1 + cfg.items.length) % cfg.items.length); }
+    function showNext() { showItem((currentIndex + 1) % cfg.items.length); }
 
-    lightboxClose.addEventListener('click', () => lightbox.classList.remove('open'));
+    lightboxClose.addEventListener('click', closeLightbox);
     lightboxPrev.addEventListener('click', showPrev);
     lightboxNext.addEventListener('click', showNext);
-    lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
     document.addEventListener('keydown', e => {
       if (!lightbox.classList.contains('open')) return;
-      if (e.key === 'Escape')      lightbox.classList.remove('open');
+      if (e.key === 'Escape')      closeLightbox();
       if (e.key === 'ArrowLeft')   showPrev();
       if (e.key === 'ArrowRight')  showNext();
     });
@@ -277,19 +339,30 @@
     /* ── Render ── */
     const wall = document.getElementById('imageWall');
 
-    if (cfg.images.length === 0) {
+    if (cfg.items.length === 0) {
       document.getElementById('emptyState').style.display = 'flex';
     } else {
-      cfg.images.forEach((src, i) => {
-        const item = document.createElement('div');
-        item.className = 'wall-item';
+      cfg.items.forEach((item, i) => {
+        const tile = document.createElement('div');
+        tile.className = 'wall-item' + (isVideo(item) ? ' is-video' : '');
+
         const img = document.createElement('img');
-        img.src = src;
+        img.src = isVideo(item) ? item.thumb : item;
         img.loading = 'lazy';
         img.alt = '';
-        item.appendChild(img);
-        item.addEventListener('click', () => openLightbox(i));
-        wall.appendChild(item);
+        tile.appendChild(img);
+
+        if (isVideo(item)) {
+          const overlay = document.createElement('div');
+          overlay.className = 'play-overlay';
+          overlay.innerHTML = `<div class="play-btn-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1d1d1f" style="margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
+          </div>`;
+          tile.appendChild(overlay);
+        }
+
+        tile.addEventListener('click', () => openLightbox(i));
+        wall.appendChild(tile);
       });
     }
   </script>
